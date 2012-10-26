@@ -44,8 +44,8 @@ def get_last_avg_from_rrd(fname):
     return value
 
 def shutdown_all_nodes():
-    #cmd_template = "ssh root@%s shutdown -h now"
-    cmd_template = "ssh root@%s hostname"
+    cmd_template = "ssh root@%s shutdown -h now"
+    #cmd_template = "ssh root@%s hostname"
     for node in all_nodes:
         cmd = cmd_template % node
         print "--- shutting down %s ---" % node
