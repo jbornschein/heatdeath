@@ -1,0 +1,66 @@
+#!/usr/bin/env python
+
+import sys
+import syslog
+
+from time import sleep
+from optparse import OptionParser
+
+
+
+
+
+if __name__ == "__main__":
+    parser = OptionParser()
+    parser.add_option("-w", "--warn-temp", dest="temp_warn", default=100., type='float',
+                  help="warning temperature (default 100 C)")
+    parser.add_option("-c", "--crit-temp", dest="temp_crit", default=110., type='float',
+                  help="critical temperature (default 110 C)")
+    parser.add_option("-f", "--file", dest="fname", type="string",
+                  default="/sys/devices/platform/i5k_amb.0/temp1_input",
+                  help="File in /sys filesystem to read temperature from")
+    parser.add_option("-v", "--verbose", dest="verbose", default=False, action="store_true")
+
+    (options, args) = parser.parse_args()
+
+
+    syslog.openlog("heat-deth", syslog.LOG_DAEMON)
+    
+    def log(prio, message):
+        if options.verbose:
+            print message
+        syslog.syslog(prio, message)
+    
+
+    # General startup logging...
+    log(syslog.LOG_INFO, "Reading temperature from '%s'" % options.fname)
+
+    if options.temp_warn > options.temp_crit:
+        options.temp_warn = options.temp_crit
+
+    log(syslog.LOG_INFO, "Warning temperature is %5.1f C" % options.temp_warn)
+    log(syslog.LOG_INFO, "Critical temperature is %5.1f C" % options.temp_crit)
+
+    while True:
+        # Read temperature
+        f = open(options.fname, "r")
+        temp = f.readline()
+        f.close()
+
+        temp = float(temp)
+        temp /= 1000
+
+        if temp < 10 or temp > 150:
+            log(syslog.LOG_EMERG, "Read totally insante temperature: %5.1f" % temp)
+            
+        if temp >= options.temp_warn:
+            log(syslog.LOG_EMERG, "TEMPERATURE WARNING: %5.1f" % temp)
+            
+        if temp >= options.temp_crit:
+            log(syslog.LOG_EMERG, "SHUTING DONW" % temp)
+            
+
+        print temp
+        sleep(1)
+        
+        

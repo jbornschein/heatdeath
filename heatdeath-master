@@ -1,0 +1,106 @@
+#!/usr/bin/env python
+
+import sys
+import syslog
+import subprocess
+import daemon
+import re
+
+
+from time import sleep
+from optparse import OptionParser
+
+
+rrd_sources = [
+    '/var/lib/collectd/rrd/head/sensors-coretemp-isa-0001/temperature-temp1.rrd',
+    '/var/lib/collectd/rrd/cn05/sensors-coretemp-isa-0001/temperature-temp1.rrd',
+    '/var/lib/collectd/rrd/cn06/sensors-coretemp-isa-0001/temperature-temp1.rrd',
+    '/var/lib/collectd/rrd/cn07/sensors-coretemp-isa-0001/temperature-temp1.rrd',
+    '/var/lib/collectd/rrd/cn15/sensors-coretemp-isa-0001/temperature-temp1.rrd',
+    '/var/lib/collectd/rrd/cn16/sensors-coretemp-isa-0001/temperature-temp1.rrd',
+    '/var/lib/collectd/rrd/cn17/sensors-coretemp-isa-0001/temperature-temp1.rrd',
+]
+
+all_nodes = [
+    'cn00', 'cn01', 'cn02', 'cn03', 'cn04', 'cn05', 'cn06', 'cn07', 'cn08', 'cn09',
+    'cn10', 'cn11', 'cn12', 'cn13', 'cn14', 'cn15', 'cn16', 'cn17'
+]
+
+def get_last_avg_from_rrd(fname):
+    cmd = "rrdtool fetch  -s -1200 -e -0 -r 30 %s AVERAGE" % fname
+    value = None
+
+    # Fetch data from RRD
+    out = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE).communicate()[0]
+
+    pat = "^(?P<time>\d+): (?P<temp>[\d+-.e]+)$"
+
+    # Iterate over lines
+    for line in out.splitlines():
+        m = re.search(pat, line)
+        if m is not None:
+            value =  float(m.group(2))
+
+    return value
+
+def shutdown_all_nodes():
+    #cmd_template = "ssh root@%s shutdown -h now"
+    cmd_template = "ssh root@%s hostname"
+    for node in all_nodes:
+        cmd = cmd_template % node
+        print "--- shutting down %s ---" % node
+        subprocess.Popen(cmd, shell=True)
+        
+def mainloop(temp_warn, temp_crit):
+    while True:
+        max_temp = -1
+        for rrd_fname in rrd_sources:
+            max_temp = max(get_last_avg_from_rrd(rrd_fname), max_temp)
+
+        if max_temp < 0.0:
+            log(syslog.LOG_CRIT, "WARNING: No temperature data available")
+    
+        if max_temp > temp_warn:
+            log(syslog.LOG_CRIT, "TEMPERATURE WARNING ** %4.1f **" % max_temp)
+
+        if max_temp > temp_crit:
+            log(syslog.LOG_CRIT, "TEMPERATURE TOO HIGH -- SHUTTING DOWN CLUSTER")
+            shutdown_all_nodes()
+
+        sleep(10)
+ 
+
+if __name__ == "__main__":
+    parser = OptionParser()
+    parser.add_option("-w", "--warn-temp", dest="temp_warn", default=55., type='float',
+                  help="warning temperature (default 100 C)")
+    parser.add_option("-c", "--crit-temp", dest="temp_crit", default=65., type='float',
+                  help="critical temperature (default 110 C)")
+    parser.add_option("-F", "--foreground", dest="foreground", default=False, action="store_true")
+    parser.add_option("-v", "--verbose", dest="verbose", default=False, action="store_true")
+
+    (options, args) = parser.parse_args()
+
+    # Sanity check
+    if options.temp_warn > options.temp_crit:
+        print "Warning temperature > shutdown temperature. Aborting"
+        exit(1)
+
+    syslog.openlog("heatdeath-master", syslog.LOG_DAEMON)
+    
+    def log(prio, message):
+        if options.verbose:
+            print message
+        syslog.syslog(prio, message)
+    
+    # General startup logging...
+    log(syslog.LOG_INFO, "Warning temperature is %5.1f C" % options.temp_warn)
+    log(syslog.LOG_INFO, "Critical temperature is %5.1f C" % options.temp_crit)
+
+    #Daemonize?
+    if options.foreground:
+        mainloop(options.temp_warn, options.temp_crit)
+    else:
+        with daemon.DaemonContext():
+            mainloop(options.temp_warn, options.temp_crit)
+        
