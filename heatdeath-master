@@ -73,9 +73,9 @@ def mainloop(temp_warn, temp_crit):
 if __name__ == "__main__":
     parser = OptionParser()
     parser.add_option("-w", "--warn-temp", dest="temp_warn", default=55., type='float',
-                  help="warning temperature (default 100 C)")
+                  help="warning temperature (default 55 C)")
     parser.add_option("-c", "--crit-temp", dest="temp_crit", default=65., type='float',
-                  help="critical temperature (default 110 C)")
+                  help="critical temperature (default 65 C)")
     parser.add_option("-F", "--foreground", dest="foreground", default=False, action="store_true")
     parser.add_option("-v", "--verbose", dest="verbose", default=False, action="store_true")
 
