@@ -18,23 +18,16 @@ NAME=heatdeath
 DESC="heatdeath emergency shutdown watchdog"
 PIDFILE=/var/run/heatdeath.pid.lock
 
-log_daemon_msg "Debugging 0 $DESC" "$NAME"
-
 test -x $DAEMON || exit 0
-
-log_daemon_msg "Debugging 1 $DESC" "$NAME"
 
 # Include defaults if available
 if [ -f /etc/default/$NAME ] ; then
 	. /etc/default/$NAME
 fi
 
-log_daemon_msg "Debugging 2 $DESC" "$NAME"
-
 # Load lsb functions
 . /lib/lsb/init-functions
 
-log_daemon_msg "Debugging 3 $DESC" "$NAME"
 case "$1" in
   start)
 	log_daemon_msg "Starting $DESC" "$NAME"
