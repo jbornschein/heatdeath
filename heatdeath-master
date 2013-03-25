@@ -86,7 +86,7 @@ if __name__ == "__main__":
         print "Warning temperature > shutdown temperature. Aborting"
         exit(1)
 
-    syslog.openlog("heatdeath-master", syslog.LOG_DAEMON)
+    syslog.openlog("heatdeathmaster", syslog.LOG_DAEMON)
     
     def log(prio, message):
         if options.verbose:

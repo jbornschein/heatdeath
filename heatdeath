@@ -54,7 +54,7 @@ if __name__ == "__main__":
     (options, args) = parser.parse_args()
 
 
-    syslog.openlog("heat-deth", syslog.LOG_DAEMON)
+    syslog.openlog("heatdeath", syslog.LOG_DAEMON)
     
     def log(prio, message):
         if options.verbose:
